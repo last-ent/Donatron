@@ -16,7 +16,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
       val req = Request((10 to 20).map(_.toString).toList)
 
       val expectedResponse =
-        ValidDonations(
+        AcceptedDonations(
           invalidInts = List.empty,
           lessThanMinimum = List.empty,
           donations   = req.values.map(v => s"Valid Number: $v")
@@ -29,7 +29,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
       val req = Request(List("10", "20", "10a", "asdf", "zzz124"))
 
       val expectedResponse =
-        ValidDonations(
+        AcceptedDonations(
           invalidInts = req.values.drop(2),
           lessThanMinimum = List.empty,
           donations   = req.values.take(2).map(v => s"Valid Number: $v")
@@ -42,7 +42,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
       val req = Request((7 to 20).map(_.toString).toList)
 
       val expectedResponse =
-        ValidDonations(
+        AcceptedDonations(
           invalidInts = List.empty,
           lessThanMinimum = req.values.take(3),
           donations = req.values.drop(3).map(v => s"Valid Number: $v")

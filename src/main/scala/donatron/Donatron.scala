@@ -43,9 +43,9 @@ class Donatron[F[_]: Effect]() {
     }
   }
 
-  def submitDonations(data: IntsAboveMinimumFound): F[ValidDonations] = {
+  def submitDonations(data: IntsAboveMinimumFound): F[AcceptedDonations] = {
     checkForMaximumLength(data.aboveMinimum).map { validDonations =>
-      ValidDonations(
+      AcceptedDonations(
         donations = validDonations,
         invalidInts = data.invalidInts,
         lessThanMinimum = data.lessThanMinimum
@@ -70,6 +70,6 @@ class Donatron[F[_]: Effect]() {
   def logResponse(data: RawData): F[Unit] =
     Effect[F].delay(println(s"Response: ${data.toLogMessage}"))
 
-  def logValidDonations(donations: ValidDonations): F[Unit] =
+  def logValidDonations(donations: AcceptedDonations): F[Unit] =
     Effect[F].delay(println(s"Valid Donations: ${donations.toLogMessage}"))
 }
