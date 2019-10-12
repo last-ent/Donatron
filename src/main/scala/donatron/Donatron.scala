@@ -11,7 +11,7 @@ class Donatron[F[_]: Effect]() {
     checkForValidInts(req)
       .flatMap(checkForMinimumLength)
       .flatMap(submitDonations)
-      .flatMap(logValidDonations)
+      .flatMap(logAndReturnAcceptedDonations)
       .flatMap(logAndReturnResponse)
 
   def checkForValidInts(req: Request): F[ValidIntsFound] = {
@@ -64,7 +64,7 @@ class Donatron[F[_]: Effect]() {
         case false => Effect[F].pure(s"Valid Number: $value")
         case true =>
           Effect[F].raiseError(
-            new RuntimeException("Donation submission failed!")
+            new RuntimeException("Failed to submit donations!")
           )
       }
     }
@@ -75,7 +75,7 @@ class Donatron[F[_]: Effect]() {
   def logResponse(data: RawData): F[Unit] =
     Effect[F].delay(println(s"Response: ${data.toLogMessage}"))
 
-  def logValidDonations(donations: AcceptedDonations): F[AcceptedDonations] =
+  def logAndReturnAcceptedDonations(donations: AcceptedDonations): F[AcceptedDonations] =
     Effect[F]
       .delay(println(s"Valid Donations: ${donations.toLogMessage}"))
       .map(_ => donations)

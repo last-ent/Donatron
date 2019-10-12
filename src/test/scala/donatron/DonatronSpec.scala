@@ -79,7 +79,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
         .unsafeRunSync()
         .left
         .value
-        .getMessage shouldEqual "Donation submission failed!"
+        .getMessage shouldEqual "Failed to submit donations!"
     }
   }
 }
