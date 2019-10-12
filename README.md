@@ -1,24 +1,22 @@
 # Donatron: A library to make accepting donations easy!
 
-An example that shows how to use `Cats' EitherT` in Scala.
-It also explains how to use the power of `EitherT's` "right-bias" for conditional code execution.
+An example that shows how to use `Cats' EitherT` for monadic composition & conditional code execution.
 
-The idea is to make following code work:
+The idea is to modify or use`Donatron.donate` to execute code:
 
 ```scala
-
-def donate(request: Request): F[Response] =
-  checkForValidInts(request)
+def donate[F[_]: cats.effect.Effect](req: Request): F[Response] =
+  checkForValidInts(req)
     .flatMap(checkForMinimumLength)
-    .flatMap(acceptDonations)
-    .flatMap(logReply)
-    .merge
+    .flatMap(submitDonations)
+    .flatMap(logValidDonations)
     .flatMap(logAndReturnResponse)
 ```
 
-The rules for the execution of `donate` function are as follows:
+The rules for the execution of `donate` function is as follows:
 
 * `checkForValidInts` is the entry point
-* `checkForMinimumLength`, `acceptDonations` & `logReply` should only be executed if previous step was successful.
+* `checkForMinimumLength`, `submitDonations` & `logValidDonations` are executed in order.
+* The above three functions should only be executed if preceding function was successful.
 * `logAndReturnResponse` should be executed regardless of all the previous steps.
 * Only exception to `logAndReturnResponse` is `acceptDonations` which can raise an error.

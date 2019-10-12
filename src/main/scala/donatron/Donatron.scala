@@ -7,7 +7,12 @@ import donatron.models._
 import scala.util.Try
 
 class Donatron[F[_]: Effect]() {
-  def donate(req: Request): F[Response] = ???
+  def donate(req: Request): F[Response] =
+    checkForValidInts(req)
+      .flatMap(checkForMinimumLength)
+      .flatMap(submitDonations)
+      .flatMap(logValidDonations)
+      .flatMap(logAndReturnResponse)
 
   def checkForValidInts(req: Request): F[ValidIntsFound] = {
     val (validInts, nonInts) =
@@ -25,8 +30,8 @@ class Donatron[F[_]: Effect]() {
 
   def checkForMinimumLength(data: ValidIntsFound): F[IntsAboveMinimumFound] = {
     // We want to keep using the donations as string.
-    // Hence, we can ensure that values are >= 10
-    // by ensuring that length of value is > 1
+    // Hence, we can check that values are >= 10
+    // by testing that length of value is > 1
     // ie., "9".length == 1, "10".length == > 2
     val (aboveMinimum, belowMinimum) = data.validInts.partition(_.length > 1)
 
@@ -70,6 +75,8 @@ class Donatron[F[_]: Effect]() {
   def logResponse(data: RawData): F[Unit] =
     Effect[F].delay(println(s"Response: ${data.toLogMessage}"))
 
-  def logValidDonations(donations: AcceptedDonations): F[Unit] =
-    Effect[F].delay(println(s"Valid Donations: ${donations.toLogMessage}"))
+  def logValidDonations(donations: AcceptedDonations): F[AcceptedDonations] =
+    Effect[F]
+      .delay(println(s"Valid Donations: ${donations.toLogMessage}"))
+      .map(_ => donations)
 }
