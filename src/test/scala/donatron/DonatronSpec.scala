@@ -1,15 +1,17 @@
 package donatron
 
-import cats.effect.IO
 import donatron.models._
 import org.scalatest.{EitherValues, Matchers, WordSpec}
 
 class DonatronSpec extends WordSpec with Matchers with EitherValues {
 
-  val donatron: Donatron[IO] = new Donatron[IO]
+  val donatron: Donatron = new Donatron
 
   def getResponse(req: Request): Response =
     donatron.donate(req).unsafeRunSync()
+
+  def getExceptionMessage(req: Request): String =
+    donatron.donate(req).attempt.unsafeRunSync().left.value.getMessage
 
   "" should {
 
@@ -55,7 +57,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
     "return NoValidInts message when Request has no valid ints" in {
       val req = Request(List("10a", "asdf", "zzz124"))
 
-      getResponse(req) shouldEqual NoValidInts(invalidInts = req.values).toResponse
+      getExceptionMessage(req) shouldEqual NoValidInts(invalidInts = req.values).toLogMessage.value
     }
 
     "return NoValuesAboveMinimum message when Request only has valid ints less than 10" in {
@@ -65,21 +67,15 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
         NoValuesAboveMinimum(
           invalidInts = List.empty,
           lessThanMinimum = req.values
-        ).toResponse
+        )
 
-      getResponse(req) shouldEqual expectedResponse
+      getExceptionMessage(req)  shouldEqual expectedResponse.toLogMessage.value
     }
 
     "return Exception when Request has valid ints greater than 10k" in {
       val req = Request((9999 to 10000).map(_.toString).toList)
 
-      donatron
-        .donate(req)
-        .attempt
-        .unsafeRunSync()
-        .left
-        .value
-        .getMessage shouldEqual "Failed to submit donations!"
+      getExceptionMessage(req) shouldEqual "Failed to submit donations!"
     }
   }
 }

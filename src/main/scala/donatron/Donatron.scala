@@ -36,7 +36,14 @@ class Donatron() {
     val (aboveMinimum, belowMinimum) = data.validInts.partition(_.length > 1)
 
     aboveMinimum.isEmpty match {
-      case true => IO.raiseError(new RuntimeException(data.show))
+      case true => IO.raiseError(
+        new RuntimeException(
+          NoValuesAboveMinimum(
+            invalidInts = data.invalidInts,
+            lessThanMinimum = belowMinimum
+          ).show
+        )
+      )
       case false =>
         IO.pure(
           DonationsAboveMinimumFound(

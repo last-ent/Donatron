@@ -2,7 +2,7 @@ name := "Donatron"
 
 version := "0.1.0"
 
-scalaVersion := "2.12.9"
+scalaVersion := "2.12.10"
 
 libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % "2.0.0",
