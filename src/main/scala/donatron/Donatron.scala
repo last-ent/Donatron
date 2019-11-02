@@ -1,34 +1,34 @@
 package donatron
 
-import cats.effect.Effect
+import cats.effect.IO
 import cats.implicits._
 import donatron.models._
 
 import scala.util.Try
 
-class Donatron[F[_]: Effect]() {
-  def donate(req: Request): F[Response] =
+class Donatron() {
+  def donate(req: Request): IO[Response] =
     checkForValidInts(req)
-      .flatMap(checkForMinimumLength)
+      .flatMap(checkForMinimumDonationAmount)
       .flatMap(submitDonations)
       .flatMap(logAndReturnAcceptedDonations)
       .flatMap(logAndReturnResponse)
 
-  def checkForValidInts(req: Request): F[ValidIntsFound] = {
+  def checkForValidInts(req: Request): IO[ValidDonationsFound] = {
     val (validInts, nonInts) =
       req.values.partition(value => Try(value.toInt).isSuccess)
 
     validInts.isEmpty match {
       case true =>
-        Effect[F].raiseError(new RuntimeException(NoValidInts(nonInts).show))
+        IO.raiseError(new RuntimeException(NoValidInts(nonInts).show))
       case false =>
-        Effect[F].pure(
-          ValidIntsFound(validInts = validInts, invalidInts = nonInts)
+        IO.pure(
+          ValidDonationsFound(validInts = validInts, invalidInts = nonInts)
         )
     }
   }
 
-  def checkForMinimumLength(data: ValidIntsFound): F[IntsAboveMinimumFound] = {
+  def checkForMinimumDonationAmount(data: ValidDonationsFound): IO[DonationsAboveMinimumFound] = {
     // We want to keep using the donations as string.
     // Hence, we can check that values are >= 10
     // by testing that length of value is > 1
@@ -36,10 +36,10 @@ class Donatron[F[_]: Effect]() {
     val (aboveMinimum, belowMinimum) = data.validInts.partition(_.length > 1)
 
     aboveMinimum.isEmpty match {
-      case true => Effect[F].raiseError(new RuntimeException(data.show))
+      case true => IO.raiseError(new RuntimeException(data.show))
       case false =>
-        Effect[F].pure(
-          IntsAboveMinimumFound(
+        IO.pure(
+          DonationsAboveMinimumFound(
             aboveMinimum = aboveMinimum,
             lessThanMinimum = belowMinimum,
             invalidInts = data.invalidInts
@@ -48,8 +48,8 @@ class Donatron[F[_]: Effect]() {
     }
   }
 
-  def submitDonations(data: IntsAboveMinimumFound): F[AcceptedDonations] = {
-    checkForMaximumLength(data.aboveMinimum).map { validDonations =>
+  def submitDonations(data: DonationsAboveMinimumFound): IO[AcceptedDonations] = {
+    checkForAboveMaxDonationAmount(data.aboveMinimum).map { validDonations =>
       AcceptedDonations(
         donations = validDonations,
         invalidInts = data.invalidInts,
@@ -58,25 +58,25 @@ class Donatron[F[_]: Effect]() {
     }
   }
 
-  def checkForMaximumLength(data: List[String]): F[List[String]] =
+  def checkForAboveMaxDonationAmount(data: List[String]): IO[List[String]] =
     data.traverse { value =>
       value.length >= 5 match {
-        case false => Effect[F].pure(s"Valid Number: $value")
+        case false => IO.pure(s"Valid Number: $value")
         case true =>
-          Effect[F].raiseError(
+          IO.raiseError(
             new RuntimeException("Failed to submit donations!")
           )
       }
     }
 
-  def logAndReturnResponse(data: RawData): F[Response] =
-    logResponse(data) >> Effect[F].delay(data.toResponse)
+  def logAndReturnResponse(data: RawData): IO[Response] =
+    logResponse(data) >> IO.delay(data.toResponse)
 
-  def logResponse(data: RawData): F[Unit] =
-    Effect[F].delay(println(s"Response: ${data.toLogMessage}"))
+  def logResponse(data: RawData): IO[Unit] =
+    IO.delay(println(s"Response: ${data.toLogMessage}"))
 
-  def logAndReturnAcceptedDonations(donations: AcceptedDonations): F[AcceptedDonations] =
-    Effect[F]
+  def logAndReturnAcceptedDonations(donations: AcceptedDonations): IO[AcceptedDonations] =
+    IO
       .delay(println(s"Valid Donations: ${donations.toLogMessage}"))
       .map(_ => donations)
 }

@@ -25,15 +25,15 @@ case class NoValuesAboveMinimum(invalidInts: List[String],
   override def toLogMessage: LogMessage = LogMessage(this.show)
 }
 
-case class ValidIntsFound(invalidInts: List[String], validInts: List[String])
+case class ValidDonationsFound(invalidInts: List[String], validInts: List[String])
     extends RawDataSuccess {
 
   override def toLogMessage: LogMessage = LogMessage(this.show)
 }
 
-case class IntsAboveMinimumFound(invalidInts: List[String],
-                                 lessThanMinimum: List[String],
-                                 aboveMinimum: List[String])
+case class DonationsAboveMinimumFound(invalidInts: List[String],
+                                      lessThanMinimum: List[String],
+                                      aboveMinimum: List[String])
     extends RawDataSuccess {
 
   override def toLogMessage: LogMessage = LogMessage(this.show)
@@ -52,7 +52,7 @@ object RawData {
     Show.show(err1 => s"""
          |NoValidInts: ${err1.invalidInts.mkString(", ")}""".stripMargin)
 
-  implicit val showValidIntsFound: Show[ValidIntsFound] =
+  implicit val showValidIntsFound: Show[ValidDonationsFound] =
     Show.show(stage2Data => s"""
         |ValidInts: ${stage2Data.validInts.mkString(", ")}
         |InValidInts: ${stage2Data.invalidInts.mkString(", ")}
@@ -64,7 +64,7 @@ object RawData {
         |NoValuesAboveMinimum: ${err2.lessThanMinimum.mkString(", ")}
         |""".stripMargin)
 
-  implicit val showIntsAboveMinimumFound: Show[IntsAboveMinimumFound] =
+  implicit val showIntsAboveMinimumFound: Show[DonationsAboveMinimumFound] =
     Show.show(fd => s"""
         |IntsAboveMinimum: ${fd.aboveMinimum.mkString(", ")}
         |InValidInts: ${fd.invalidInts.mkString(", ")}
