@@ -5,18 +5,18 @@ An example that shows how to use `Cats' EitherT` for monadic composition & condi
 The idea is to modify or use`Donatron.donate` to execute code:
 
 ```scala
-def donate[F[_]: cats.effect.Effect](req: Request): F[Response] =
+def donate(req: Request): IO[Response] =
   checkForValidInts(req)
-    .flatMap(checkForMinimumLength)
+    .flatMap(checkForMinimumDonationAmount)
     .flatMap(submitDonations)
-    .flatMap(logAcceptedDonations)
+    .flatMap(logAndReturnAcceptedDonations)
     .flatMap(logAndReturnResponse)
 ```
 
 The rules for the execution of `donate` function are as follows:
 
 * `checkForValidInts` is the entry point
-* `checkForMinimumLength`, `submitDonations` & `logAcceptedDonations` are executed in order.
+* `checkForMinimumDonationAmount`, `submitDonations` & `logAndReturnAcceptedDonations` are executed in order.
 * The above three functions should only be executed if preceding function were successful.
 * `logAndReturnResponse` should be executed regardless of all the previous steps.
 * Only exception to `logAndReturnResponse` is `acceptDonations` which can raise an error.
