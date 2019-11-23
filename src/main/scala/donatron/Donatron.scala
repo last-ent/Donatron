@@ -1,5 +1,6 @@
 package donatron
 
+import cats.data.EitherT
 import cats.effect.IO
 import cats.implicits._
 import donatron.models._
@@ -7,63 +8,72 @@ import donatron.models._
 import scala.util.Try
 
 class Donatron() {
+
   def donate(req: Request): IO[Response] =
-    checkForValidInts(req)
-      .flatMap(checkForMinimumDonationAmount)
-      .flatMap(submitDonations)
-      .flatMap(logAndReturnAcceptedDonations)
+    checkForValidIntsET(req)
+      .flatMap(checkForMinimumDonationAmountET)
+      .flatMap(submitDonationsET)
+      .flatMap(logAndReturnAcceptedDonationsET)
+      .merge
       .flatMap(logAndReturnResponse)
 
-  def checkForValidInts(req: Request): IO[ValidDonationsFound] = {
-    val (validInts, nonInts) =
+  def checkForValidIntsET(req: Request): EitherT[IO, RawData, ValidDonationsFound] = {
+    val parts =
       req.values.partition(value => Try(value.toInt).isSuccess)
 
-    validInts.isEmpty match {
-      case true =>
-        IO.raiseError(new RuntimeException(NoValidInts(nonInts).show))
-      case false =>
-        IO.pure(
-          ValidDonationsFound(validInts = validInts, invalidInts = nonInts)
-        )
-    }
+    EitherT.fromEither(
+      parts match {
+        case (noValidInts: List[String], allNonInts: List[String])
+          if noValidInts.isEmpty =>
+          Left(NoValidInts(invalidInts = allNonInts))
+
+        case (validDonations: List[String], nonInts: List[String]) =>
+          Right(ValidDonationsFound(invalidInts = nonInts, validInts = validDonations))
+      }
+    )
   }
 
-  def checkForMinimumDonationAmount(data: ValidDonationsFound): IO[DonationsAboveMinimumFound] = {
+  def checkForMinimumDonationAmountET(data: ValidDonationsFound): EitherT[IO, RawData, DonationsAboveMinimumFound] = {
     // We want to keep using the donations as string.
     // Hence, we can check that values are >= 10
     // by testing that length of value is > 1
     // ie., "9".length == 1, "10".length == > 2
-    val (aboveMinimum, belowMinimum) = data.validInts.partition(_.length > 1)
+    val parts = data.validInts.partition(_.length > 1)
 
-    aboveMinimum.isEmpty match {
-      case true => IO.raiseError(
-        new RuntimeException(
-          NoValuesAboveMinimum(
-            invalidInts = data.invalidInts,
-            lessThanMinimum = belowMinimum
-          ).show
-        )
-      )
-      case false =>
-        IO.pure(
-          DonationsAboveMinimumFound(
-            aboveMinimum = aboveMinimum,
-            lessThanMinimum = belowMinimum,
-            invalidInts = data.invalidInts
+    EitherT.fromEither(
+      parts match {
+        case (noneAboveMinimum: List[String], allBelowMinimum: List[String])
+          if noneAboveMinimum.isEmpty =>
+          Left(
+            NoValuesAboveMinimum(
+              invalidInts = data.invalidInts,
+              lessThanMinimum = allBelowMinimum
+            )
           )
-        )
-    }
+        case (aboveMinimum: List[String], belowMinimum: List[String]) =>
+          Right(
+            DonationsAboveMinimumFound(
+              invalidInts = data.invalidInts,
+              lessThanMinimum = belowMinimum,
+              aboveMinimum = aboveMinimum
+            )
+          )
+      }
+    )
   }
 
-  def submitDonations(data: DonationsAboveMinimumFound): IO[AcceptedDonations] = {
-    checkForAboveMaxDonationAmount(data.aboveMinimum).map { validDonations =>
-      AcceptedDonations(
-        donations = validDonations,
-        invalidInts = data.invalidInts,
-        lessThanMinimum = data.lessThanMinimum
-      )
-    }
-  }
+  def submitDonations(data: DonationsAboveMinimumFound): IO[AcceptedDonations] =
+    checkForAboveMaxDonationAmount(data.aboveMinimum)
+      .map { validDonations =>
+        AcceptedDonations(
+          donations = validDonations,
+          invalidInts = data.invalidInts,
+          lessThanMinimum = data.lessThanMinimum
+        )
+      }
+
+  def submitDonationsET(data: DonationsAboveMinimumFound): EitherT[IO, RawData, AcceptedDonations] =
+    EitherT.liftF(submitDonations(data))
 
   def checkForAboveMaxDonationAmount(data: List[String]): IO[List[String]] =
     data.traverse { value =>
@@ -86,4 +96,7 @@ class Donatron() {
     IO
       .delay(println(s"Valid Donations: ${donations.toLogMessage}"))
       .map(_ => donations)
+
+  def logAndReturnAcceptedDonationsET(donations: AcceptedDonations): EitherT[IO, RawData, AcceptedDonations] =
+    EitherT.liftF(logAndReturnAcceptedDonations(donations))
 }

@@ -57,7 +57,7 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
     "return NoValidInts message when Request has no valid ints" in {
       val req = Request(List("10a", "asdf", "zzz124"))
 
-      getExceptionMessage(req) shouldEqual NoValidInts(invalidInts = req.values).toLogMessage.value
+      getResponse(req) shouldEqual NoValidInts(invalidInts = req.values).toResponse
     }
 
     "return NoValuesAboveMinimum message when Request only has valid ints less than 10" in {
@@ -67,9 +67,9 @@ class DonatronSpec extends WordSpec with Matchers with EitherValues {
         NoValuesAboveMinimum(
           invalidInts = List.empty,
           lessThanMinimum = req.values
-        )
+        ).toResponse
 
-      getExceptionMessage(req)  shouldEqual expectedResponse.toLogMessage.value
+      getResponse(req)  shouldEqual expectedResponse
     }
 
     "return Exception when Request has valid ints greater than 10k" in {
